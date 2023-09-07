@@ -12,7 +12,7 @@ class Request
     @query = {}
   end
 
-  def respond(status: nil, data: nil)
+  def respond(data = nil, status: nil)
     response = []
     response << "HTTP/1.1 #{status || 200}\r\n"
     if data

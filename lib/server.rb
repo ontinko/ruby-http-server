@@ -12,9 +12,9 @@ class Server
 
     @error_mapping = {
       server_error_action: proc { |request, e|
-                             request.respond(status: 500, data: { error: e&.message || 'Something went wrong' })
+                             request.respond({ error: e&.message || 'Something went wrong' }, status: 500)
                            },
-      not_found_action: proc { |request| request.respond(status: 404, data: { error: 'Something went wrong' }) }
+      not_found_action: proc { |request| request.respond({ error: 'Not found' }, status: 404) }
     }
 
     @http_actions = {
