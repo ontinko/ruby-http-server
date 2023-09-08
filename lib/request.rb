@@ -1,15 +1,36 @@
 # frozen_string_literal: true
 
 require_relative 'errors/internal_error'
+require_relative 'request_parser'
 require 'uri'
+require 'pry'
 
 class Request
-  attr_reader :method, :path, :query
+  attr_reader :method, :path, :query, :headers, :body, :full_path
+
+  SUPPORTED_METHODS = %i[get post].freeze
+  METHODS_WITH_BODY = %i[post].freeze
 
   def initialize(client)
-    @error = ''
     @client = client
     @query = {}
+    @body = nil
+    @headers = nil
+  end
+
+  # Exists to avoid throwing errors during initialization, must be run after initialize
+  def prepare
+    start_line_data = RequestParser.parse_start_line(@client)
+    @method = start_line_data[:method].downcase.to_sym
+    @full_path = start_line_data[:uri_string]
+    parsed_full_path = RequestParser.parse_full_path(@full_path)
+
+    @path = parsed_full_path[:path]
+    @query = parsed_full_path[:query]
+    @headers = RequestParser.parse_headers(@client)
+    raise InternalError, "Invalid request method: #{@method}" unless SUPPORTED_METHODS.include?(@method)
+
+      @body = METHODS_WITH_BODY.include?(@method) ? RequestParser.parse_body(@client, headers['content-type'], headers['content-length'].to_i) : nil
   end
 
   def respond(data = nil, status: nil)
@@ -22,67 +43,5 @@ class Request
     response << "\n"
     @client.write(response.join)
     @client.close
-  end
-
-  # Exists to avoid throwing errors during initialization, must be run after initialize
-  def prepare
-    parse_head
-    @data = read_request_data
-  end
-
-  private
-
-  def parse_head
-    data = @client.gets.split
-    method = data[0]
-    parse_path(data[1])
-    case method
-    when 'GET' then @method = :get
-    else
-      raise InternalError, "Invalid request method: #{method}"
-    end
-  end
-
-  def parse_path(full_path)
-    path, query = full_path.split('?')
-    @path = path.sub(%r{/*$}, '')
-    return if query.nil?
-
-    parse_query(query)
-  end
-
-  def parse_query(string)
-    URI.decode_uri_component(string).split(/&|;/).each do |pair|
-      key, value = pair.split('=')
-      parsed_value = value&.split(',')
-
-      if parsed_value && parsed_value.size > 1
-        @query[key.to_sym] = parsed_value
-        next
-      end
-
-      @query[key.to_sym] = value
-    end
-
-    @query = result
-  end
-
-  def read_request_data
-    case @method
-    when :get then read_get
-    end
-  end
-
-  def read_get
-    data = []
-
-    loop do
-      line = @client.gets
-      break if line.chomp.empty?
-
-      data << line
-    end
-
-    data
   end
 end

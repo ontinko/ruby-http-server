@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require 'socket'
-require 'pry'
 require 'json'
 require_relative 'request'
 require_relative 'errors/internal_error'
@@ -18,7 +17,8 @@ class Server
     }
 
     @http_actions = {
-      get: {}
+      get: {},
+      post: {}
     }
   end
 
@@ -40,6 +40,10 @@ class Server
 
   def get(path, &action)
     @http_actions[:get][path] = action
+  end
+
+  def post(path, &action)
+    @http_actions[:post][path] = action
   end
 
   def server_error(&action)
