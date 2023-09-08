@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative 'errors/internal_error'
+require_relative 'errors/method_not_allowed'
 require_relative 'request_parser'
 require 'uri'
 require 'pry'
@@ -8,8 +9,8 @@ require 'pry'
 class Request
   attr_reader :method, :path, :query, :headers, :body, :full_path
 
-  SUPPORTED_METHODS = %i[get post].freeze
-  METHODS_WITH_BODY = %i[post].freeze
+  SUPPORTED_METHODS = %i[get post put delete patch].freeze
+  METHODS_WITH_BODY = %i[post put patch].freeze
 
   def initialize(client)
     @client = client
@@ -28,9 +29,11 @@ class Request
     @path = parsed_full_path[:path]
     @query = parsed_full_path[:query]
     @headers = RequestParser.parse_headers(@client)
-    raise InternalError, "Invalid request method: #{@method}" unless SUPPORTED_METHODS.include?(@method)
+    raise MethodNotAllowed unless SUPPORTED_METHODS.include?(@method)
 
-      @body = METHODS_WITH_BODY.include?(@method) ? RequestParser.parse_body(@client, headers['content-type'], headers['content-length'].to_i) : nil
+    return @body = nil unless METHODS_WITH_BODY.include?(@method)
+
+    @body = RequestParser.parse_body(@client, headers['content-type'], headers['content-length'].to_i)
   end
 
   def respond(data = nil, status: nil)

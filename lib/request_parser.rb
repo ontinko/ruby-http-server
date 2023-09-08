@@ -64,7 +64,7 @@ class RequestParser
 
       JSON.parse(raw_data)
     rescue JSON::ParserError
-      raise InternalError, 'Invalid JSON data'
+      raise InternalError, 'Invalid JSON format'
     end
 
     def parse_query(string)

@@ -1,0 +1,1 @@
+class MethodNotAllowed < StandardError; end
