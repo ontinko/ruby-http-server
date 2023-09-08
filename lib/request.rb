@@ -36,7 +36,7 @@ class Request
     @body = RequestParser.parse_body(@client, headers['content-type'], headers['content-length'].to_i)
   end
 
-  def respond(data = nil, status: nil)
+  def json(data = nil, status: nil)
     response = []
     response << "HTTP/1.1 #{status || 200}\r\n"
     if data

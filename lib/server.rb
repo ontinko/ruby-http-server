@@ -12,12 +12,12 @@ class Server
     @server = TCPServer.new(port)
 
     @error_actions = {
-      server_unavailable: proc { |req| req.respond({ error: 'Service unavailable' }, status: 503) },
+      server_unavailable: proc { |req| req.json({ error: 'Service unavailable' }, status: 503) },
       internal_error: proc do |request, e|
-                        request.respond({ error: e&.message || 'Something went wrong' }, status: 500)
+                        request.json({ error: e&.message || 'Something went wrong' }, status: 500)
                       end,
-      not_found: proc { |request| request.respond({ error: 'Not found' }, status: 404) },
-      method_not_allowed: proc { |request| request.respond({ error: 'Method not allowed' }, status: 405) }
+      not_found: proc { |request| request.json({ error: 'Not found' }, status: 404) },
+      method_not_allowed: proc { |request| request.json({ error: 'Method not allowed' }, status: 405) }
     }
 
     @paths = {}
