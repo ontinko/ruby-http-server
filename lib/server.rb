@@ -3,6 +3,7 @@
 require 'socket'
 require 'json'
 require_relative 'request'
+require_relative 'multithreader'
 require_relative 'errors/internal_error'
 require_relative 'errors/method_not_allowed'
 
@@ -11,6 +12,7 @@ class Server
     @server = TCPServer.new(port)
 
     @error_actions = {
+      server_unavailable: proc { |req| req.respond({ error: 'Service unavailable' }, status: 503) },
       internal_error: proc do |request, e|
                         request.respond({ error: e&.message || 'Something went wrong' }, status: 500)
                       end,
@@ -30,20 +32,7 @@ class Server
   end
 
   def run
-    loop do
-      client = @server.accept
-      request = Request.new(client)
-      request.prepare
-
-      action = @http_actions[request.method][request.path] || error_action(request.path)
-      action.call(request)
-    rescue InternalError, MethodNotAllowed => e
-      if e.instance_of? InternalError
-        @error_actions[:internal_error].call(request, e)
-      elsif e.instance_of? MethodNotAllowed
-        @error_actions[:method_not_allowed].call(request)
-      end
-    end
+    Multithreader.call { handle_request }
   rescue Interrupt
     puts "\nStopping the server..."
     exit
@@ -87,6 +76,21 @@ class Server
   end
 
   private
+
+  def handle_request
+    client = @server.accept
+    request = Request.new(client)
+    request.prepare
+
+    action = @http_actions[request.method][request.path] || error_action(request.path)
+    action.call(request)
+  rescue InternalError, MethodNotAllowed => e
+    if e.instance_of? InternalError
+      @error_actions[:internal_error].call(request, e)
+    elsif e.instance_of? MethodNotAllowed
+      @error_actions[:method_not_allowed].call(request)
+    end
+  end
 
   def error_action(path)
     return @error_actions[:not_found] unless @paths.key?(path)
