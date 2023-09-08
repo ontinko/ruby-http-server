@@ -47,4 +47,12 @@ class Request
     @client.write(response.join)
     @client.close
   end
+
+  def redirect(path)
+    response = []
+    response << "HTTP/1.1 302\r\n"
+    response << "Location: #{path}\r\n\n"
+    @client.write(response.join)
+    @client.close
+  end
 end
