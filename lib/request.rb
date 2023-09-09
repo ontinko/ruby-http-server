@@ -4,7 +4,6 @@ require_relative 'errors/internal_error'
 require_relative 'errors/method_not_allowed'
 require_relative 'request_parser'
 require 'uri'
-require 'pry'
 
 class Request
   attr_reader :method, :path, :query, :headers, :body, :full_path

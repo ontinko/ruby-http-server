@@ -2,7 +2,6 @@
 
 require 'socket'
 require 'json'
-require 'pry'
 require_relative 'request'
 require_relative 'errors/internal_error'
 require_relative 'errors/method_not_allowed'
@@ -53,28 +52,23 @@ class Server
   end
 
   def get(path, &action)
-    @http_actions[:get][path] = action
-    add_method_to_path(path, :get)
+    define_route(:get, path, &action)
   end
 
   def post(path, &action)
-    @http_actions[:post][path] = action
-    add_method_to_path(path, :post)
+    define_route(:post, path, &action)
   end
 
   def put(path, &action)
-    @http_actions[:put][path] = action
-    add_method_to_path(path, :put)
+    define_route(:put, path, &action)
   end
 
   def patch(path, &action)
-    @http_actions[:patch][path] = action
-    add_method_to_path(path, :patch)
+    define_route(:patch, path, &action)
   end
 
   def delete(path, &action)
-    @http_actions[:delete][path] = action
-    add_method_to_path(path, :delete)
+    define_route(:delete, path, &action)
   end
 
   def internal_error(&action)
@@ -105,10 +99,9 @@ class Server
     end
   end
 
-  def error_action(path)
-    return @error_actions[:not_found] unless @paths.key?(path)
-
-    @error_actions[:method_not_allowed]
+  def define_route(method, path, &action)
+    @http_actions[method][path] = action
+    add_method_to_path(path, method)
   end
 
   def add_method_to_path(path, method)
@@ -117,5 +110,11 @@ class Server
     else
       @paths[path] = [method]
     end
+  end
+
+  def error_action(path)
+    return @error_actions[:not_found] unless @paths.key?(path)
+
+    @error_actions[:method_not_allowed]
   end
 end
