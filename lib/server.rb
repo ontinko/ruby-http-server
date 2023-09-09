@@ -2,14 +2,17 @@
 
 require 'socket'
 require 'json'
+require 'pry'
 require_relative 'request'
-require_relative 'multithreader'
 require_relative 'errors/internal_error'
 require_relative 'errors/method_not_allowed'
 
 class Server
-  def initialize(port)
+  def initialize(port, max_connections: 10)
     @server = TCPServer.new(port)
+    @max_connections = max_connections
+    @active_connections = 0
+    @mutex = Mutex.new
 
     @error_actions = {
       server_unavailable: proc { |req| req.json({ error: 'Service unavailable' }, status: 503) },
@@ -32,7 +35,18 @@ class Server
   end
 
   def run
-    Multithreader.call { handle_request }
+    loop do
+      client = @server.accept
+      if @mutex.synchronize { @active_connections < @max_connections ? @active_connections += 1 : false }
+        Thread.new do
+          handle_request(client)
+        ensure
+          @mutex.synchronize { @active_connections -= 1 }
+        end
+      else
+        @error_actions[:server_unavailable].call(Request.new(client))
+      end
+    end
   rescue Interrupt
     puts "\nStopping the server..."
     exit
@@ -77,8 +91,7 @@ class Server
 
   private
 
-  def handle_request
-    client = @server.accept
+  def handle_request(client)
     request = Request.new(client)
     request.prepare
 

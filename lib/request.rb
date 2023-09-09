@@ -36,15 +36,18 @@ class Request
     @body = RequestParser.parse_body(@client, headers['content-type'], headers['content-length'].to_i)
   end
 
-  def json(data = nil, status: nil)
+  def json(data, status: 200)
     response = []
-    response << "HTTP/1.1 #{status || 200}\r\n"
-    if data
-      response << "Content-Type: application/json\r\n\n"
-      response << "#{data.to_json}\r"
-    end
-    response << "\n"
+    response << "HTTP/1.1 #{status}\r\n"
+    response << "Content-Type: application/json\r\n\n"
+    response << "#{data.to_json}\r\n"
     @client.write(response.join)
+    @client.close
+  end
+
+  def status(status = 200)
+    response = "HTTP/1.1 #{status}\r\n"
+    @client.write(response)
     @client.close
   end
 
