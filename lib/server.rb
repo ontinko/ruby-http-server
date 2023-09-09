@@ -3,11 +3,13 @@
 require 'socket'
 require 'json'
 require_relative 'request'
+require_relative 'router'
 require_relative 'errors/internal_error'
 require_relative 'errors/method_not_allowed'
 
 class Server
   def initialize(port, max_connections: 10)
+    @router = Router.new
     @server = TCPServer.new(port)
     @max_connections = max_connections
     @active_connections = 0
@@ -42,7 +44,7 @@ class Server
   end
 
   def get(path, &action)
-    @router.define_route(path, &action)
+    @router.define_route(:get, path, &action)
   end
 
   def post(path, &action)
