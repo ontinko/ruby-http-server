@@ -42,23 +42,23 @@ class Server
   end
 
   def get(path, &action)
-    @router.get(path, &action)
+    @router.define_route(path, &action)
   end
 
   def post(path, &action)
-    @router.post(:post, path, &action)
+    @router.define_route(:post, path, &action)
   end
 
   def put(path, &action)
-    @router.put(:put, path, &action)
+    @router.define_route(:put, path, &action)
   end
 
   def patch(path, &action)
-    @router.patch(:patch, path, &action)
+    @router.define_route(:patch, path, &action)
   end
 
   def delete(path, &action)
-    @router.delete(:delete, path, &action)
+    @router.define_route(:delete, path, &action)
   end
 
   def internal_error(&action)
