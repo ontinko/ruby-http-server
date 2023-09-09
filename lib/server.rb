@@ -12,25 +12,6 @@ class Server
     @max_connections = max_connections
     @active_connections = 0
     @mutex = Mutex.new
-
-    @error_actions = {
-      server_unavailable: proc { |req| req.json({ error: 'Service unavailable' }, status: 503) },
-      internal_error: proc do |request, e|
-                        request.json({ error: e&.message || 'Something went wrong' }, status: 500)
-                      end,
-      not_found: proc { |request| request.json({ error: 'Not found' }, status: 404) },
-      method_not_allowed: proc { |request| request.json({ error: 'Method not allowed' }, status: 405) }
-    }
-
-    @paths = {}
-
-    @http_actions = {
-      get: {},
-      post: {},
-      put: {},
-      patch: {},
-      delete: {}
-    }
   end
 
   def run
@@ -43,7 +24,7 @@ class Server
           @mutex.synchronize { @active_connections -= 1 }
         end
       else
-        @error_actions[:server_unavailable].call(Request.new(client))
+        @router.handle_service_unavailable(Request.new(client))
       end
     end
   rescue Interrupt
@@ -52,35 +33,35 @@ class Server
   end
 
   def get(path, &action)
-    define_route(:get, path, &action)
+    @router.get(path, &action)
   end
 
   def post(path, &action)
-    define_route(:post, path, &action)
+    @router.post(:post, path, &action)
   end
 
   def put(path, &action)
-    define_route(:put, path, &action)
+    @router.put(:put, path, &action)
   end
 
   def patch(path, &action)
-    define_route(:patch, path, &action)
+    @router.patch(:patch, path, &action)
   end
 
   def delete(path, &action)
-    define_route(:delete, path, &action)
+    @router.delete(:delete, path, &action)
   end
 
   def internal_error(&action)
-    @error_actions[:internal_error] = action
+    @router.internal_error(&action)
   end
 
   def not_found(&action)
-    @error_actions[:not_found] = action
+    @router.not_found(&action)
   end
 
   def method_not_allowed(&action)
-    @error_actions[:method_not_allowed] = action
+    @router.method_not_allowed(&action)
   end
 
   private
@@ -89,32 +70,6 @@ class Server
     request = Request.new(client)
     request.prepare
 
-    action = @http_actions[request.method][request.path] || error_action(request.path)
-    action.call(request)
-  rescue InternalError, MethodNotAllowed => e
-    if e.instance_of? InternalError
-      @error_actions[:internal_error].call(request, e)
-    elsif e.instance_of? MethodNotAllowed
-      @error_actions[:method_not_allowed].call(request)
-    end
-  end
-
-  def define_route(method, path, &action)
-    @http_actions[method][path] = action
-    add_method_to_path(path, method)
-  end
-
-  def add_method_to_path(path, method)
-    if @paths[path]
-      @paths[path] << method unless @paths[path].include?(method)
-    else
-      @paths[path] = [method]
-    end
-  end
-
-  def error_action(path)
-    return @error_actions[:not_found] unless @paths.key?(path)
-
-    @error_actions[:method_not_allowed]
+    @router.handle_request(request)
   end
 end
