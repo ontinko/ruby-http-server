@@ -12,6 +12,15 @@ class Server
     @max_connections = max_connections
     @active_connections = 0
     @mutex = Mutex.new
+
+    @error_actions = {
+      service_unavailable: proc { |req| req.json({ error: 'Service unavailable' }, status: 503) },
+      internal_error: proc do |request, e|
+                        request.json({ error: e&.message || 'Something went wrong' }, status: 500)
+                      end,
+      not_found: proc { |request| request.json({ error: 'Not found' }, status: 404) },
+      method_not_allowed: proc { |request| request.json({ error: 'Method not allowed' }, status: 405) }
+    }
   end
 
   def run
@@ -24,7 +33,7 @@ class Server
           @mutex.synchronize { @active_connections -= 1 }
         end
       else
-        @router.handle_service_unavailable(Request.new(client))
+        @error_actions[:service_unavailable].call(Request.new(client))
       end
     end
   rescue Interrupt
@@ -53,15 +62,15 @@ class Server
   end
 
   def internal_error(&action)
-    @router.internal_error(&action)
+    @error_actions[:internal_error] = action
   end
 
   def not_found(&action)
-    @router.not_found(&action)
+    @error_actions[:not_found] = action
   end
 
   def method_not_allowed(&action)
-    @router.method_not_allowed(&action)
+    @error_actions[:method_not_allowed] = action
   end
 
   private
@@ -71,5 +80,11 @@ class Server
     request.prepare
 
     @router.handle_request(request)
+  rescue InternalError, MethodNotAllowed => e
+    if e.instance_of? InternalError
+      @error_actions[:internal_error].call(request, e)
+    elsif e.instance_of? MethodNotAllowed
+      @error_actions[:method_not_allowed].call(request)
+    end
   end
 end
