@@ -43,16 +43,19 @@ class RequestParser
     def parse_full_path(full_path)
       result = {
         path: '',
-        query: ''
+        query: {}
       }
 
       path, query = full_path.split('?')
-      stripped_path = path.sub(%r{/*$}, '')
 
-      result[:path] = stripped_path.empty? ? '/' : stripped_path
+      result[:path] = normalize_path(path)
       result[:query] = parse_query(query)
 
       result
+    end
+
+    def normalize_path(path)
+      path.sub(%r{^/*(.*?)/*$}, '\1')
     end
 
     private
