@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require_relative 'request_parser'
 require_relative 'errors/internal_error'
 require_relative 'errors/method_not_allowed'
 require_relative 'errors/not_found'
@@ -18,7 +19,7 @@ class Router
 
   def define_route(method, path, &action)
     current_route = @routes
-    path.sub(%r{^/*(.*?)/*$}, '\1').split('/').each do |subpath|
+    normalize_path(path).each do |subpath|
       current_route[subpath] = {} unless current_route[subpath]
       current_route = current_route[subpath]
     end
@@ -48,19 +49,22 @@ class Router
 
   private
 
+  def normalize_path(path)
+    RequestParser.normalize_path(path).split('/')
+  end
+
   def match_action(path, method)
     current_route = @routes
-    path.sub(%r{^/*(.*?)/*$}, '\1').split('/').each do |subpath|
-      if current_route[subpath].nil?
-        key = current_route.keys.find { |k| k.start_with?(':') }
-
-        raise NotFound unless key
-
-        current_route = current_route[key]
+    normalize_path(path).each do |subpath|
+      if current_route[subpath]
+        current_route = current_route[subpath]
         next
       end
 
-      current_route = current_route[subpath]
+      key = current_route.keys.find { |k| k.start_with?(':') }
+      raise NotFound unless key
+
+      current_route = current_route[key]
     end
 
     methods = current_route['']
