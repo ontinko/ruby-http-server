@@ -46,9 +46,26 @@ end
 server.post('/posts') do |req|
   req.json({ data: 'POST request to /posts' })
 end
+```
 
+You can use `req.params` method to access URL parameters of the request:
+
+```ruby
 server.get('/posts/:post_id/comments/:comment_id') do |req|
-  req.json({ data: 'Viewing a comment' })
+  req.json({ data: "Viewing commment #{req.params[:comment_id]} to post #{req.params[:post_id]}" })
+end
+```
+
+Or access query params through `req.query`:
+
+```ruby
+server.get('/post/:post_id/comments') do |req|
+  sort_by = req.query[:sort_by]
+  if sort_by
+    req.json({ data: "Sorting comments by #{sort_by}" })
+  else
+    req.json({ data: 'Not sorting comments for now' })
+  end
 end
 ```
 
