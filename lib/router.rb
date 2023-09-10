@@ -28,11 +28,11 @@ class Router
     end
 
     current_path, next_path = path.split('/', 2)
-    current_path ||= ''
+    next_path ||= ''
     routes[current_path] = {} unless routes[current_path]
     next_routes = routes[current_path]
 
-    def_route(method, next_path || '', next_routes, &action)
+    def_route(method, next_path, next_routes, &action)
   end
 
   def match_action(path, method, routes)
@@ -43,15 +43,13 @@ class Router
       return action
     end
 
-    current_path, next_path = path.split('/', 2)
-    next_routes = routes[current_path || '']
-
-    return match_action(next_path || '', method, next_routes) if next_routes
-
-    next_routes = routes[routes.keys.find { |k| k[0] == ':' }]
+    split_path = path.split('/', 2)
+    current_path = split_path[0]
+    next_path = split_path[1] || ''
+    next_routes = routes[current_path] || routes[routes.keys.find { |k| k[0] == ':' }]
 
     raise NotFound unless next_routes
 
-    match_action(next_path || '', method, next_routes)
+    match_action(next_path, method, next_routes)
   end
 end
