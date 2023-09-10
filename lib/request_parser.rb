@@ -43,7 +43,7 @@ class RequestParser
     def parse_full_path(full_path)
       result = {
         path: '',
-        query: ''
+        query: {}
       }
 
       path, query = full_path.split('?')

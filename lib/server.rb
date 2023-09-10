@@ -36,7 +36,7 @@ class Server
           @mutex.synchronize { @active_connections -= 1 }
         end
       else
-        @error_actions[:service_unavailable].call(Request.new(client))
+        @error_actions[:service_unavailable].call(Request.new(client, @router))
       end
     end
   rescue Interrupt
@@ -79,7 +79,7 @@ class Server
   private
 
   def handle_request(client)
-    request = Request.new(client)
+    request = Request.new(client, @router)
     request.prepare
 
     @router.handle_request(request)

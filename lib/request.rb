@@ -6,14 +6,16 @@ require_relative 'request_parser'
 require 'uri'
 
 class Request
-  attr_reader :method, :path, :query, :headers, :body, :full_path
+  attr_reader :method, :path, :params, :query, :headers, :body, :full_path
 
   SUPPORTED_METHODS = %i[get post put delete patch].freeze
   METHODS_WITH_BODY = %i[post put patch].freeze
 
-  def initialize(client)
+  def initialize(client, router)
     @client = client
+    @router = router
     @query = {}
+    @params = {}
     @body = nil
     @headers = nil
   end
@@ -26,11 +28,12 @@ class Request
     parsed_full_path = RequestParser.parse_full_path(@full_path)
 
     @path = parsed_full_path[:path]
+    @params = @router.params_for_path(@path)
     @query = parsed_full_path[:query]
     @headers = RequestParser.parse_headers(@client)
     raise MethodNotAllowed unless SUPPORTED_METHODS.include?(@method)
 
-    return @body = nil unless METHODS_WITH_BODY.include?(@method)
+    return unless METHODS_WITH_BODY.include?(@method)
 
     @body = RequestParser.parse_body(@client, headers['content-type'], headers['content-length'].to_i)
   end
