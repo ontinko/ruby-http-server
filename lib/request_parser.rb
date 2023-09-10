@@ -47,9 +47,8 @@ class RequestParser
       }
 
       path, query = full_path.split('?')
-      stripped_path = path.sub(%r{/*$}, '')
 
-      result[:path] = stripped_path.empty? ? '/' : stripped_path
+      result[:path] = path.sub(%r{^/*(.*?)/*$}, '\1')
       result[:query] = parse_query(query)
 
       result

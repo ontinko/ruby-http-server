@@ -6,6 +6,7 @@ require_relative 'request'
 require_relative 'router'
 require_relative 'errors/internal_error'
 require_relative 'errors/method_not_allowed'
+require_relative 'errors/not_found'
 
 class Server
   def initialize(port, max_connections: 10)
@@ -82,11 +83,11 @@ class Server
     request.prepare
 
     @router.handle_request(request)
-  rescue InternalError, MethodNotAllowed => e
-    if e.instance_of? InternalError
-      @error_actions[:internal_error].call(request, e)
-    elsif e.instance_of? MethodNotAllowed
-      @error_actions[:method_not_allowed].call(request)
-    end
+  rescue InternalError => e
+    @error_actions[:internal_error].call(request, e)
+  rescue MethodNotAllowed
+    @error_actions[:method_not_allowed].call(request)
+  rescue NotFound
+    @error_actions[:not_found].call(request)
   end
 end

@@ -15,41 +15,43 @@ class Router
   end
 
   def define_route(method, path, routes = @routes, &action)
-    if path.nil?
-      return routes[nil][method] = action if routes[nil]
-
-      return routes[nil] = { method => action }
-    end
-
-    current_path, next_path = path.split('/', 2)
-    routes[current_path] = {} unless routes[current_path]
-    next_routes = routes[current_path]
-
-    define_route(next_path, method, next_routes)
+    def_route(method, path.sub(%r{^/*(.*?)/*$}, '\1'), routes, &action)
   end
 
   private
 
-  def match_action(path, method, routes)
-    if path.nil?
-      methods = routes[path]
-      raise NotFound unless methods
+  def def_route(method, path, routes, &action)
+    if path.empty?
+      return routes[path][method] = action if routes[path]
 
-      action = methods[method]
+      return routes[path] = { method => action }
+    end
+
+    current_path, next_path = path.split('/', 2)
+    current_path ||= ''
+    routes[current_path] = {} unless routes[current_path]
+    next_routes = routes[current_path]
+
+    def_route(method, next_path || '', next_routes, &action)
+  end
+
+  def match_action(path, method, routes)
+    if path.empty?
+      action = routes[path][method]
       raise MethodNotAllowed unless action
 
       return action
     end
 
     current_path, next_path = path.split('/', 2)
-    next_routes = routes[current_path]
+    next_routes = routes[current_path || '']
 
-    return match_action(next_path, method, next_routes) if next_routes
+    return match_action(next_path || '', method, next_routes) if next_routes
 
-    next_routes = routes[routes.keys.find { |k| k }[0]]
+    next_routes = routes[routes.keys.find { |k| k[0] == ':' }]
 
-    return nil unless next_routes
+    raise NotFound unless next_routes
 
-    match_action(next_path, method, next_routes)
+    match_action(next_path || '', method, next_routes)
   end
 end
