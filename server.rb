@@ -2,11 +2,11 @@
 
 require 'socket'
 require 'json'
-require_relative 'request'
-require_relative 'router'
-require_relative 'errors/internal_error'
-require_relative 'errors/method_not_allowed'
-require_relative 'errors/not_found'
+require_relative 'lib/request'
+require_relative 'lib/router'
+require_relative 'lib/errors/internal_error'
+require_relative 'lib/errors/method_not_allowed'
+require_relative 'lib/errors/not_found'
 
 class Server
   def initialize(port, max_connections: 10)
