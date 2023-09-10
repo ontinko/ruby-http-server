@@ -19,7 +19,7 @@ class Router
 
   def define_route(method, path, &action)
     current_route = @routes
-    normalize_path(path).each do |subpath|
+    RequestParser.normalize_path(path).split('/').each do |subpath|
       current_route[subpath] = {} unless current_route[subpath]
       current_route = current_route[subpath]
     end
@@ -49,13 +49,9 @@ class Router
 
   private
 
-  def normalize_path(path)
-    RequestParser.normalize_path(path).split('/')
-  end
-
   def match_action(path, method)
     current_route = @routes
-    normalize_path(path).each do |subpath|
+    path.split('/').each do |subpath|
       if current_route[subpath]
         current_route = current_route[subpath]
         next
